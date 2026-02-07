@@ -1,0 +1,16 @@
+{
+    "agents": [
+        "gemini"
+    ],
+    "guidelines": true,
+    "herd_mcp": false,
+    "mcp": true,
+    "packages": [
+        "laravel/ai"
+    ],
+    "sail": false,
+    "skills": [
+        "pest-testing",
+        "developing-with-ai-sdk"
+    ]
+}
