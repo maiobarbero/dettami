@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
+
 <body class="bg-gray-100 flex items-center justify-center h-screen">
 
     <div class="bg-white p-8 rounded-lg shadow-lg text-center max-w-md w-full">
@@ -25,9 +27,15 @@
         </div>
 
         <div id="recordingsList" class="text-left text-sm text-gray-500 mt-4 border-t pt-4 hidden">
-            <p class="font-semibold mb-2">Last record:</p>
-            <audio id="audioPlayback" controls class="w-full"></audio>
-            <div id="uploadStatus" class="mt-2 text-center font-bold text-blue-600"></div>
+            <div id="transcriptionBox" class="mt-4 hidden">
+                <p class="font-semibold mb-2">Transcription:</p>
+                <div class="relative">
+                    <textarea id="transcriptionText" class="w-full p-3 border rounded h-32 text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500" readonly></textarea>
+                    <button id="copyBtn" class="absolute top-2 right-2 bg-white hover:bg-gray-100 text-gray-700 border shadow-sm px-2 py-1 rounded text-xs font-bold transition">
+                        Copy
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -39,14 +47,19 @@
         const stopBtn = document.getElementById('stopBtn');
         const status = document.getElementById('status');
         const recIcon = document.getElementById('recIcon');
-        const uploadStatus = document.getElementById('uploadStatus');
         const recordingsList = document.getElementById('recordingsList');
-        const audioPlayback = document.getElementById('audioPlayback');
+        const transcriptionBox = document.getElementById('transcriptionBox');
+        const transcriptionText = document.getElementById('transcriptionText');
+        const copyBtn = document.getElementById('copyBtn');
 
         startBtn.addEventListener('click', async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: true
+                });
+
                 mediaRecorder = new MediaRecorder(stream);
+
                 audioChunks = [];
 
                 mediaRecorder.ondataavailable = event => {
@@ -54,29 +67,30 @@
                 };
 
                 mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioBlob = new Blob(audioChunks, {
+                        type: 'audio/webm'
+                    });
                     const audioUrl = URL.createObjectURL(audioBlob);
-                    audioPlayback.src = audioUrl;
                     recordingsList.classList.remove('hidden');
-                    
+                    transcriptionBox.classList.add('hidden');
+
                     uploadAudio(audioBlob);
-                    
-                    // Stop tracks to release mic
+
                     stream.getTracks().forEach(track => track.stop());
                 };
 
                 mediaRecorder.start();
-                
+
                 status.innerText = "Recording...";
                 status.classList.add('text-red-600', 'font-bold');
                 startBtn.disabled = true;
                 startBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
                 startBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                
+
                 stopBtn.disabled = false;
                 stopBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
                 stopBtn.classList.add('bg-red-600', 'hover:bg-red-700');
-                
+
                 recIcon.classList.remove('hidden');
 
             } catch (err) {
@@ -86,27 +100,27 @@
 
         stopBtn.addEventListener('click', () => {
             mediaRecorder.stop();
-            
+
             status.innerText = "Saving...";
             status.classList.remove('text-red-600', 'font-bold');
-            
+
             startBtn.disabled = false;
             startBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
             startBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-            
+
             stopBtn.disabled = true;
             stopBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
             stopBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
-            
+
             recIcon.classList.add('hidden');
         });
 
         async function uploadAudio(blob) {
-            uploadStatus.innerText = "Uploading...";
-            
             const formData = new FormData();
-            // Usiamo estensione .webm che è standard per il browser recording
-            formData.append('audio', blob, 'recording.webm'); 
+            formData.append('audio', blob, 'recording.webm');
+
+            transcriptionBox.classList.remove('hidden');
+            transcriptionText.value = "Processing...";
 
             try {
                 const response = await fetch('/recorder/upload', {
@@ -118,19 +132,27 @@
                 });
 
                 const result = await response.json();
-                
-                if (response.ok) {
-                    uploadStatus.innerText = "✅ Saved: " + result.path;
-                    uploadStatus.className = "mt-2 text-center font-bold text-green-600";
+
+                if (response.ok && result.transcription) {
+                    transcriptionText.value = result.transcription;
                 } else {
-                    uploadStatus.innerText = "❌ Error: " + result.message;
-                    uploadStatus.className = "mt-2 text-center font-bold text-red-600";
+                    transcriptionText.value = "Error: " + (result.message || "Unknown error");
                 }
             } catch (error) {
                 console.error(error);
-                uploadStatus.innerText = "❌ Network error";
+                transcriptionText.value = "Error: " + error.message;
             }
         }
+
+        copyBtn.addEventListener('click', () => {
+            transcriptionText.select();
+            navigator.clipboard.writeText(transcriptionText.value).then(() => {
+                const originalText = copyBtn.innerText;
+                copyBtn.innerText = "Copied!";
+                setTimeout(() => copyBtn.innerText = originalText, 2000);
+            });
+        });
     </script>
 </body>
+
 </html>
