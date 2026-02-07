@@ -2,10 +2,8 @@
 
 Dettami ("Dictate to me") is a minimal, AI-powered virtual assistant designed for instant voice-to-text transcription.
 
-<p align="center">
-    ![Dettami homepage screenshot](https://github.com/maiobarbero/dettami/blob/main/screnshots/homepage.png?raw=true)
+![Dettami homepage screenshot](https://raw.githubusercontent.com/maiobarbero/dettami/refs/heads/main/screenshots/homepage.png)
 
-</p>
 
 ## Features
 
